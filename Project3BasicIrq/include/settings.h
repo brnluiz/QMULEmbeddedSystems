@@ -28,7 +28,7 @@ enum {
 
 
 #define OSC_CYCLE_COUNTER     false
-#define OSC_TASK_COUNTER      true
-#define OSC_INTERRUPT_COUNTER false
+#define OSC_TASK_COUNTER      false
+#define OSC_INTERRUPT_COUNTER true
 
 #endif
