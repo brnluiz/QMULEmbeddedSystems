@@ -2,6 +2,7 @@
 #define SETTINGS_H
 
 #define TICKS_T 50
+#define TICKS_BUTTONBOUNCE_T 100 // Wait 100ms until "accept" new button presses
 
 enum {
 	OSC_OFF,

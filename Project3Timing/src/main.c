@@ -178,11 +178,17 @@ void configureGPIOinput(void) {
  *    - Test the bit for pin 6 to see if it generated the interrupt 
   ---------------------------------------------------------------------------- */
 int buttonState;
+int buttonBounceCounter;
 void PORTD_IRQHandler(void) {  
 	NVIC_ClearPendingIRQ(PORTD_IRQn);
-	if ((PORTD->ISFR & MASK(BUTTON_POS))) {
+	// Check if the button is pressed and if the counter is equal zero
+	// The counter is responsible to avoid one button press interrupt the code more than once
+	if ((PORTD->ISFR & MASK(BUTTON_POS)) && buttonBounceCounter == 0) {
+		
+		// If the button is not pressed, then change state and reset the counter
 		if(buttonState != BUTTON_PRESSED) {
 			buttonState = BUTTON_PRESSED;
+			buttonBounceCounter = TICKS_BUTTONBOUNCE_T;
 		}
 	}
 	// Clear status flags 
@@ -202,7 +208,11 @@ void Init_SysTick(void) {
        while(1); 
    }
 	 
+	 // Load the default TICKS_T to SysTickCounter
 	 SysTickCounter = TICKS_T;
+	 
+	 // Load the default TICKS_BUTTONBOUNCE_T to ButtonBounceCounter
+	 buttonBounceCounter = TICKS_BUTTONBOUNCE_T;
 }
 
 /*----------------------------------------------------------------------------
@@ -215,6 +225,13 @@ void SysTick_Handler(void) {
 		SysTickCounter--;
 	}	
 	
+	if (buttonBounceCounter > 0) 
+	{
+		buttonBounceCounter--;
+	}	
+	
+	// If the state machine is already timing, them increment timing
+	// The value of timing var will be in miliseconds
 	if(controlState == STATE_TIMING) {
 		timing++;
 	}
