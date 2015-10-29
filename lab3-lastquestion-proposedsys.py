@@ -1,3 +1,16 @@
+'''
+Three tasks system:
+- buttonColourModeTask: checks the if the button for colourMode was pressed
+- buttonSpeedTask: checks the if the button for speed was pressed
+- ledDemoTask: demonstrate the LED depending on the user config
+
+There is a global struct called Settings to make the inter-task communication possible.
+The two import proprieties of the struct are:
+- speed: save the choosen speed (based on the user config with the button)
+- colourMode: save the choosen colour mode (based on the user config with the button)
+- speedToogle and colourModeToogle: just toogle the value of the above properties
+'''
+
 # This example consider that will be some struct/class defining
 # some functions to check some states for buttonColour and buttonSpeed, as:
 # - button.isHolded()
