@@ -16,6 +16,12 @@ enum {
 	COLOR_BLUE
 };
 
+
+#define TOTAL_TASKS 2
+enum {
+	T_LEDS
+};
+
 #define LED_TIMEOUT      300 // 3000ms / 10ms (ticks)
 #define DEBOUNCE_TIMEOUT 20  // 200ms
 #endif

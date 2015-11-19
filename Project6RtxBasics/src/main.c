@@ -21,10 +21,8 @@
 #include "gpio_defs.h"
 #include "settings.h"
 
-
-OS_TID t_led;                     /*  task id of task to flash led */
-OS_TID t_button;                  /* task id of task to read button */
-
+OS_TID t_evt_mngr;
+OS_TID t_tasks[TOTAL_TASKS]; /*  task ids */
 
 /* ----------------------------------------
 	 Configure GPIO output for on-board LEDs 
@@ -88,7 +86,7 @@ void PORTD_IRQHandler(void) {
 	NVIC_ClearPendingIRQ(PORTD_IRQn);
 	if ((PORTD->ISFR & MASK(BUTTON_POS))) {
 		// Add code to respond to interupt here
-		isr_evt_set (EVT_BTN_PRESSED, t_button);
+		isr_evt_set (EVT_BTN_PRESSED, t_evt_mngr);
 	}
 	// Clear status flags 
 	PORTD->ISFR = 0xffffffff; 
@@ -161,7 +159,7 @@ __task void buttonTask (void) {
 		}
 		// guard against button bounces
     os_dly_wait (20);              // delay 200ms
-		os_evt_clr (EVT_BTN_PRESSED, t_button); // discard pending notifications
+		os_evt_clr (EVT_BTN_PRESSED, t_evt_mngr); // discard pending notifications
   }
 }
 
@@ -176,8 +174,16 @@ int nextLedColor(int ledActualColor) {
 	return ledActualColor;
 }
 
-
-
+// Generate the previous LED color
+int previousLedColor(int ledActualColor) {
+	ledActualColor--;
+	
+	if (ledActualColor < 0) {
+		ledActualColor = COLOR_BLUE;
+	}
+	
+	return ledActualColor;
+}
 
 // Turns off all LEDs
 void turnOffAllLeds() {
@@ -219,34 +225,44 @@ __task void ledCycleTask(void) {
 		// If the button was pressed, then change the active state
 		if (buttonPressed == OS_R_EVT) {
 			ledCycleActive = !ledCycleActive;
+			
+			// If the pressed button reactivate the process, get the color previous to the stop click
+			if(ledCycleActive) {
+				ledColor = previousLedColor(ledColor);
+			}
 		}
-		os_evt_clr (EVT_BTN_PRESSED, t_led);
+		
+		// Discard pending notifications
+		os_evt_clr (EVT_BTN_PRESSED, t_tasks[T_LEDS]);
 	}
 }
 
 
 
 __task void btnEventManagerTask(void) {
+	int i = 0;
+
 	while(1) {
 		// Wait until button is pressed
 		os_evt_wait_and (EVT_BTN_PRESSED, 0xffff);
 		
-		// Set the event flag for the listeners
-		os_evt_set (EVT_BTN_PRESSED, t_led);
-		
+		// Propagate the event through all listeners
+		for(i=0; i<TOTAL_TASKS;i++) {
+			os_evt_set (EVT_BTN_PRESSED, t_tasks[i]);
+		}
 		// Wait some time to debounce the buton
 		os_dly_wait(DEBOUNCE_TIMEOUT);
 		
 		// Discard pending notifications
-		os_evt_clr (EVT_BTN_PRESSED, t_button);
+		os_evt_clr (EVT_BTN_PRESSED, t_evt_mngr);
 	}
 }
 /*----------------------------------------------------------------------------
  *        Task 'init': Initialize
  *---------------------------------------------------------------------------*/
 __task void init (void) {
-  t_button = os_tsk_create (btnEventManagerTask, 0);  // start button task
-	t_led    = os_tsk_create (ledCycleTask, 0);        // start led task
+  t_evt_mngr = os_tsk_create (btnEventManagerTask, 0);  // start button task
+	t_tasks[T_LEDS]  = os_tsk_create (ledCycleTask, 0);        // start led task
   os_tsk_delete_self ();
 }
 
