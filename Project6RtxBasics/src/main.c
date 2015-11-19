@@ -220,6 +220,7 @@ __task void ledCycleTask(void) {
 		if (buttonPressed == OS_R_EVT) {
 			ledCycleActive = !ledCycleActive;
 		}
+		os_evt_clr (EVT_BTN_PRESSED, t_led);
 	}
 }
 
@@ -237,7 +238,7 @@ __task void btnEventManagerTask(void) {
 		os_dly_wait(DEBOUNCE_TIMEOUT);
 		
 		// Discard pending notifications
-		os_evt_clr (EVT_BTN_PRESSED, t_led);
+		os_evt_clr (EVT_BTN_PRESSED, t_button);
 	}
 }
 /*----------------------------------------------------------------------------
