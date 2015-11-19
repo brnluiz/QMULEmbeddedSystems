@@ -16,6 +16,6 @@ enum {
 	COLOR_BLUE
 };
 
-#define LED_TIMEOUT 300 // 3000mS / 10mS (ticks)
+#define LED_TIMEOUT 280 // 2800mS / 10mS (ticks) - Considering a delay of 20ms for debouncing
 
 #endif

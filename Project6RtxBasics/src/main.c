@@ -88,7 +88,7 @@ void PORTD_IRQHandler(void) {
 	NVIC_ClearPendingIRQ(PORTD_IRQn);
 	if ((PORTD->ISFR & MASK(BUTTON_POS))) {
 		// Add code to respond to interupt here
-		isr_evt_set (EVT_BTN_PRESSED, t_button);
+		isr_evt_set (EVT_BTN_PRESSED, t_led);
 	}
 	// Clear status flags 
 	PORTD->ISFR = 0xffffffff; 
@@ -177,6 +177,7 @@ int nextLedColor(int ledActualColor) {
 }
 
 
+
 // Turns off all LEDs
 void turnOffAllLeds() {
 	redLEDOnOff   (LED_OFF);
@@ -185,28 +186,40 @@ void turnOffAllLeds() {
 }
 
 
+
 // Task to cycle the LEDs
 __task void ledCycleTask(void) {
 	int ledColor = COLOR_RED;
+	int buttonPressed = 0;
+	int ledCycleActive = 1;
 	
 	while(1) {
-		turnOffAllLeds();
-		switch (ledColor) {
-			case COLOR_RED:
-				redLEDOnOff   (LED_ON);
-				break;
-			case COLOR_GREEN:
-				greenLEDOnOff (LED_ON);
-				break;
-			case COLOR_BLUE:
-				blueLEDOnOff  (LED_ON);
-				break;
+		if (ledCycleActive) {
+			turnOffAllLeds();
+			switch (ledColor) {
+				case COLOR_RED:
+					redLEDOnOff   (LED_ON);
+					break;
+				case COLOR_GREEN:
+					greenLEDOnOff (LED_ON);
+					break;
+				case COLOR_BLUE:
+					blueLEDOnOff  (LED_ON);
+					break;
+			}
+
+			ledColor = nextLedColor(ledColor);
 		}
 		
-		ledColor = nextLedColor(ledColor);
+		// delay 2.8sec (the other 0.2 will be for the debounce) and wait for the button press
+		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, LED_TIMEOUT);  // wait for an event flag 0x0001
 		
-		// delay 3sec
-		os_dly_wait (LED_TIMEOUT);
+		// If the button was pressed, than change the active state
+		if (buttonPressed == OS_R_EVT) {
+			ledCycleActive = !ledCycleActive;
+		}
+		os_dly_wait (20);                    // delay 200ms - debouncing
+		os_evt_clr (EVT_BTN_PRESSED, t_led); // discard pending notifications
 	}
 }
 
