@@ -88,7 +88,7 @@ void PORTD_IRQHandler(void) {
 	NVIC_ClearPendingIRQ(PORTD_IRQn);
 	if ((PORTD->ISFR & MASK(BUTTON_POS))) {
 		// Add code to respond to interupt here
-		isr_evt_set (EVT_BTN_PRESSED, t_led);
+		isr_evt_set (EVT_BTN_PRESSED, t_button);
 	}
 	// Clear status flags 
 	PORTD->ISFR = 0xffffffff; 
@@ -178,12 +178,14 @@ int nextLedColor(int ledActualColor) {
 
 
 
+
 // Turns off all LEDs
 void turnOffAllLeds() {
 	redLEDOnOff   (LED_OFF);
 	greenLEDOnOff (LED_OFF);
 	blueLEDOnOff  (LED_OFF);
 }
+
 
 
 
@@ -211,24 +213,39 @@ __task void ledCycleTask(void) {
 			ledColor = nextLedColor(ledColor);
 		}
 		
-		// delay 2.8sec (the other 0.2 will be for the debounce) and wait for the button press
+		// delay 3sec and wait for the button press
 		buttonPressed = os_evt_wait_and (EVT_BTN_PRESSED, LED_TIMEOUT);  // wait for an event flag 0x0001
-		
-		// If the button was pressed, than change the active state
+
+		// If the button was pressed, then change the active state
 		if (buttonPressed == OS_R_EVT) {
 			ledCycleActive = !ledCycleActive;
 		}
-		os_dly_wait (20);                    // delay 200ms - debouncing
-		os_evt_clr (EVT_BTN_PRESSED, t_led); // discard pending notifications
 	}
 }
 
+
+
+__task void btnEventManagerTask(void) {
+	while(1) {
+		// Wait until button is pressed
+		os_evt_wait_and (EVT_BTN_PRESSED, 0xffff);
+		
+		// Set the event flag for the listeners
+		os_evt_set (EVT_BTN_PRESSED, t_led);
+		
+		// Wait some time to debounce the buton
+		os_dly_wait(DEBOUNCE_TIMEOUT);
+		
+		// Discard pending notifications
+		os_evt_clr (EVT_BTN_PRESSED, t_led);
+	}
+}
 /*----------------------------------------------------------------------------
  *        Task 'init': Initialize
  *---------------------------------------------------------------------------*/
 __task void init (void) {
-  // t_button = os_tsk_create (buttonTask, 0);  // start button task
-	t_led = os_tsk_create (ledCycleTask, 0);        // start led task
+  t_button = os_tsk_create (btnEventManagerTask, 0);  // start button task
+	t_led    = os_tsk_create (ledCycleTask, 0);        // start led task
   os_tsk_delete_self ();
 }
 
