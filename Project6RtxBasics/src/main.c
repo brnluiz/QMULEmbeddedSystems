@@ -25,6 +25,19 @@ OS_TID t_evt_mngr;
 OS_TID t_tasks[TOTAL_TASKS]; /*  task ids */
 int oscState = OSC_OFF;      // Oscilloscope State
 
+// Toogle an output for osciloscope measures
+void oscToogle(void) {
+	if (oscState == OSC_ON)
+	{
+		PTB->PSOR |= MASK(OSCIL_POS) ;
+	}
+	else
+	{		
+		PTB->PCOR |= MASK(OSCIL_POS) ;
+	}
+	oscState = !oscState;
+}
+
 /* ----------------------------------------
 	 Configure GPIO output for on-board LEDs 
 	   1. Enable clock to GPIO ports
@@ -56,10 +69,10 @@ void LED_Init() {
 
 void output_init() {
 	// Enable the clock for port b
-	SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK ;
+	//SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK;
 	
 	// Set as GPIO
-	PORTB->PCR[OSCIL_POS] &= ~PORT_PCR_MUX_MASK;          
+	PORTB->PCR[OSCIL_POS] &= ~PORT_PCR_MUX_MASK;
 	PORTB->PCR[OSCIL_POS] |= PORT_PCR_MUX(1); 
 	
 	// Set ports to outputs
@@ -101,7 +114,6 @@ void configureGPIOinput(void) {
 void PORTD_IRQHandler(void) {  
 	NVIC_ClearPendingIRQ(PORTD_IRQn);
 	if ((PORTD->ISFR & MASK(BUTTON_POS))) {
-		// Add code to respond to interupt here
 		isr_evt_set (EVT_BTN_PRESSED, t_evt_mngr);
 	}
 	// Clear status flags 
@@ -177,19 +189,6 @@ __task void buttonTask (void) {
     os_dly_wait (20);              // delay 200ms
 		os_evt_clr (EVT_BTN_PRESSED, t_evt_mngr); // discard pending notifications
   }
-}
-
-// Toogle an output for osciloscope measures
-void oscToogle(void) {
-	if (oscState == OSC_ON)
-	{
-		PTB->PSOR |= MASK(OSCIL_POS) ;
-	}
-	else
-	{		
-		PTB->PCOR |= MASK(OSCIL_POS) ;
-	}
-	oscState = !oscState;
 }
 
 // Generate the next LED color
@@ -278,6 +277,10 @@ __task void btnEventManagerTask(void) {
 	while(1) {
 		// Wait until button is pressed
 		os_evt_wait_and (EVT_BTN_PRESSED, 0xffff);
+		
+		// osc toogle
+		oscToogle();
+		oscToogle();
 		
 		// Propagate the event through all listeners
 		for(i=0; i<TOTAL_TASKS;i++) {
