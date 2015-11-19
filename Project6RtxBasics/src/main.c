@@ -19,6 +19,7 @@
 #include <RTL.h>
 #include <MKL25Z4.H>
 #include "gpio_defs.h"
+#include "settings.h"
 
 
 OS_TID t_led;                     /*  task id of task to flash led */
@@ -87,7 +88,7 @@ void PORTD_IRQHandler(void) {
 	NVIC_ClearPendingIRQ(PORTD_IRQn);
 	if ((PORTD->ISFR & MASK(BUTTON_POS))) {
 		// Add code to respond to interupt here
-		isr_evt_set (0x0001, t_button);
+		isr_evt_set (EVT_BTN_PRESSED, t_button);
 	}
 	// Clear status flags 
 	PORTD->ISFR = 0xffffffff; 
@@ -150,7 +151,7 @@ __task void buttonTask (void) {
   greenLEDOnOff(LED_OFF);
 	
 	while (1) {
-    os_evt_wait_and (0x0001, 0xffff);  // wait for an event flag 0x0001
+    os_evt_wait_and (EVT_BTN_PRESSED, 0xFFFF);  // wait for an event flag 0x0001
 		if (ledState == LED_ON) {
 			greenLEDOnOff(LED_OFF);
 			ledState = LED_OFF ;
@@ -159,19 +160,62 @@ __task void buttonTask (void) {
 			ledState = LED_ON ;
 		}
 		// guard against button bounces
-    os_dly_wait (20);               // delay 200ms
-		os_evt_clr (0x0001, t_button); // discard pending notifications
+    os_dly_wait (20);              // delay 200ms
+		os_evt_clr (EVT_BTN_PRESSED, t_button); // discard pending notifications
   }
 }
 
+// Generate the next LED color
+int nextLedColor(int ledActualColor) {
+	ledActualColor++;
+	
+	if (ledActualColor > COLOR_BLUE) {
+		ledActualColor = 0;
+	}
+	
+	return ledActualColor;
+}
 
+
+// Turns off all LEDs
+void turnOffAllLeds() {
+	redLEDOnOff   (LED_OFF);
+	greenLEDOnOff (LED_OFF);
+	blueLEDOnOff  (LED_OFF);
+}
+
+
+// Task to cycle the LEDs
+__task void ledCycleTask(void) {
+	int ledColor = COLOR_RED;
+	
+	while(1) {
+		turnOffAllLeds();
+		switch (ledColor) {
+			case COLOR_RED:
+				redLEDOnOff   (LED_ON);
+				break;
+			case COLOR_GREEN:
+				greenLEDOnOff (LED_ON);
+				break;
+			case COLOR_BLUE:
+				blueLEDOnOff  (LED_ON);
+				break;
+		}
+		
+		ledColor = nextLedColor(ledColor);
+		
+		// delay 3sec
+		os_dly_wait (LED_TIMEOUT);
+	}
+}
 
 /*----------------------------------------------------------------------------
  *        Task 'init': Initialize
  *---------------------------------------------------------------------------*/
 __task void init (void) {
-  t_led = os_tsk_create (ledTask, 0);        // start led task
-  t_button = os_tsk_create (buttonTask, 0);  // start button task
+  // t_button = os_tsk_create (buttonTask, 0);  // start button task
+	t_led = os_tsk_create (ledCycleTask, 0);        // start led task
   os_tsk_delete_self ();
 }
 
