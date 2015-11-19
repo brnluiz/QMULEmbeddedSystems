@@ -23,6 +23,7 @@
 
 OS_TID t_evt_mngr;
 OS_TID t_tasks[TOTAL_TASKS]; /*  task ids */
+int oscState = OSC_OFF;      // Oscilloscope State
 
 /* ----------------------------------------
 	 Configure GPIO output for on-board LEDs 
@@ -42,15 +43,30 @@ void LED_Init() {
 	PORTB->PCR[GREEN_LED_POS] &= ~PORT_PCR_MUX_MASK;          
 	PORTB->PCR[GREEN_LED_POS] |= PORT_PCR_MUX(1);          
 	PORTD->PCR[BLUE_LED_POS] &= ~PORT_PCR_MUX_MASK;          
-	PORTD->PCR[BLUE_LED_POS] |= PORT_PCR_MUX(1);          
+	PORTD->PCR[BLUE_LED_POS] |= PORT_PCR_MUX(1);    	
 	
 	// Set ports to outputs
 	PTB->PDDR |= MASK(RED_LED_POS) | MASK(GREEN_LED_POS);
 	PTD->PDDR |= MASK(BLUE_LED_POS);
+	PTB->PDDR |= MASK(OSCIL_POS) ;	
 
 	// Turn off LEDs
 	PTB->PSOR = MASK(RED_LED_POS) | MASK(GREEN_LED_POS);
-	PTD->PSOR = MASK(BLUE_LED_POS);
+}
+
+void output_init() {
+	// Enable the clock for port b
+	SIM->SCGC5 |= SIM_SCGC5_PORTB_MASK ;
+	
+	// Set as GPIO
+	PORTB->PCR[OSCIL_POS] &= ~PORT_PCR_MUX_MASK;          
+	PORTB->PCR[OSCIL_POS] |= PORT_PCR_MUX(1); 
+	
+	// Set ports to outputs
+	PTB->PDDR |= MASK(OSCIL_POS) ;	
+	
+	// turn off
+	PTB->PSOR = MASK(OSCIL_POS) ;
 }
 
 /*----------------------------------------------------------------------------
@@ -163,6 +179,19 @@ __task void buttonTask (void) {
   }
 }
 
+// Toogle an output for osciloscope measures
+void oscToogle(void) {
+	if (oscState == OSC_ON)
+	{
+		PTB->PSOR |= MASK(OSCIL_POS) ;
+	}
+	else
+	{		
+		PTB->PCOR |= MASK(OSCIL_POS) ;
+	}
+	oscState = !oscState;
+}
+
 // Generate the next LED color
 int nextLedColor(int ledActualColor) {
 	ledActualColor++;
@@ -174,6 +203,7 @@ int nextLedColor(int ledActualColor) {
 	return ledActualColor;
 }
 
+
 // Generate the previous LED color
 int previousLedColor(int ledActualColor) {
 	ledActualColor--;
@@ -184,6 +214,7 @@ int previousLedColor(int ledActualColor) {
 	
 	return ledActualColor;
 }
+
 
 // Turns off all LEDs
 void turnOffAllLeds() {
@@ -239,6 +270,8 @@ __task void ledCycleTask(void) {
 
 
 
+
+// Button Event Manager Task
 __task void btnEventManagerTask(void) {
 	int i = 0;
 
@@ -270,8 +303,8 @@ __task void init (void) {
  *        Main: Initialize and start RTX Kernel
  *---------------------------------------------------------------------------*/
 int main (void) {
-
-  LED_Init ();                 // Initialize the LEDs 
-  configureGPIOinput() ;       // Initialise button
-  os_sys_init(init);           // Initialize RTX and start init
+  LED_Init();                 // Initialize the LEDs 
+	output_init();
+  configureGPIOinput();       // Initialise button
+  os_sys_init(init);          // Initialize RTX and start init
 }

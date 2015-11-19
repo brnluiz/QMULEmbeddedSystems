@@ -13,6 +13,8 @@
 // Button is on port D, pin 6
 #define BUTTON_POS (6)
 
+#define OSCIL_POS (8) // PTB8
+
 // LED states
 #define LED_ON (1)
 #define LED_OFF (0)

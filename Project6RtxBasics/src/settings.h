@@ -2,6 +2,11 @@
 #define SETTINGS_H
 
 enum {
+	OSC_OFF,
+	OSC_ON,
+};
+
+enum {
 	LED_BLINKING,
 	LED_NOT_BLINKING
 };
