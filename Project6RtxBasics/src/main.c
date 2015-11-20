@@ -232,8 +232,10 @@ __task void ledCycleTask(void) {
 	int ledCycleActive = 1;
 	
 	while(1) {
+		turnOffAllLeds();
+		
+		// If the led cyle is meant to be active, then turn the right LEDs
 		if (ledCycleActive) {
-			turnOffAllLeds();
 			switch (ledColor) {
 				case COLOR_RED:
 					redLEDOnOff   (LED_ON);
@@ -279,7 +281,6 @@ __task void btnEventManagerTask(void) {
 		os_evt_wait_and (EVT_BTN_PRESSED, 0xffff);
 		
 		// osc toogle
-		oscToogle();
 		oscToogle();
 		
 		// Propagate the event through all listeners
